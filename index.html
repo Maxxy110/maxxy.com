@@ -733,22 +733,27 @@
     appendTyping();
 
     try {
+      // Build contents with system message prepended as first user turn
+      const contents = [
+        { role: 'user', parts: [{ text: SYSTEM }] },
+        { role: 'model', parts: [{ text: 'Got it! I am Maxxy, ready to help.' }] },
+        ...chatHistory
+      ];
+
       const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            system_instruction: { parts: [{ text: SYSTEM }] },
-            contents: chatHistory
-          })
+          body: JSON.stringify({ contents })
         }
       );
 
       const data = await res.json();
       if (data.error) {
         removeTyping();
-        appendMessage('assistant', '⚠️ Invalid API key. Click "Add API Key" above to update it.');
+        const errMsg = data.error.message || 'Unknown error';
+        appendMessage('assistant', `⚠️ API Error: ${errMsg}. Click "Add API Key" to update your key.`);
         GEMINI_KEY = '';
         localStorage.removeItem('maxxy_gemini_key');
         updateKeyBadge(false);
