@@ -405,6 +405,90 @@
       .sidebar { display: none; }
       .suggestions { grid-template-columns: 1fr; }
     }
+
+    /* API KEY MODAL */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.35);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+    }
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 32px 28px;
+      max-width: 420px;
+      width: 100%;
+      box-shadow: 0 20px 60px rgba(108, 92, 231, 0.15);
+      animation: fadeUp 0.3s ease;
+    }
+    .modal-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--accent), #b066f7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      margin-bottom: 16px;
+    }
+    .modal h2 { font-size: 20px; font-weight: 600; margin-bottom: 8px; color: var(--text); }
+    .modal p { font-size: 13.5px; color: var(--text-muted); line-height: 1.6; margin-bottom: 20px; }
+    .modal a { color: var(--accent); text-decoration: none; font-weight: 500; }
+    .modal a:hover { text-decoration: underline; }
+    .modal-input {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--text);
+      background: var(--surface2);
+      outline: none;
+      margin-bottom: 12px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      box-sizing: border-box;
+    }
+    .modal-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.12); }
+    .modal-btn {
+      width: 100%;
+      padding: 12px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-family: var(--font);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.15s;
+    }
+    .modal-btn:hover { background: var(--accent2); transform: translateY(-1px); }
+    .modal-error { font-size: 12.5px; color: #e05555; margin-bottom: 10px; display: none; }
+    .modal-note { font-size: 12px; color: var(--text-muted); text-align: center; margin-top: 12px; }
+    .key-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 12px;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    .key-badge:hover { border-color: var(--accent); color: var(--text); }
+    .key-dot { width: 7px; height: 7px; border-radius: 50%; background: #22c55e; }
   </style>
 </head>
 <body>
@@ -441,9 +525,15 @@
 <div class="main">
   <div class="topbar">
     <span style="font-size:13px;">Maxxy Chat</span>
-    <div class="model-badge">
-      <div class="model-dot"></div>
-      Maxxy v1.0
+    <div style="display:flex;gap:8px;align-items:center;">
+      <div class="key-badge" onclick="showModal()" id="key-badge">
+        <div class="key-dot" id="key-dot" style="background:#e05555;"></div>
+        <span id="key-label">Add API Key</span>
+      </div>
+      <div class="model-badge">
+        <div class="model-dot"></div>
+        Maxxy v1.0
+      </div>
     </div>
   </div>
 
@@ -489,6 +579,19 @@
   </div>
 </div>
 
+<!-- API KEY MODAL -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-icon">🔑</div>
+    <h2>Enter your Groq API Key</h2>
+    <p>Maxxy uses Groq's free AI to power responses. Get your free key in 2 minutes at <a href="https://console.groq.com" target="_blank">console.groq.com</a> — no credit card needed!</p>
+    <div class="modal-error" id="modal-error">⚠️ Please enter a valid Groq API key (starts with gsk_)</div>
+    <input class="modal-input" id="api-key-input" type="password" placeholder="gsk_..." onkeydown="if(event.key==='Enter') saveKey()"/>
+    <button class="modal-btn" onclick="saveKey()">Start Chatting with Maxxy ✦</button>
+    <p class="modal-note">🔒 Your key is stored only in your browser — never sent to us.</p>
+  </div>
+</div>
+
 <script>
   const messagesEl = document.getElementById('messages');
   const inputEl    = document.getElementById('chat-input');
@@ -497,9 +600,48 @@
 
   let chatHistory = [];
   let isTyping    = false;
+  let GROQ_KEY    = localStorage.getItem('maxxy_groq_key') || '';
 
-  // Maxxy's personality system prompt
   const SYSTEM = `You are Maxxy, a friendly, smart, and helpful AI assistant. You were created by the user. Be warm, concise, and helpful. Use casual but intelligent language. Occasionally use emojis where fitting. Keep responses clear and well-structured.`;
+
+  // Show or hide modal on load
+  function initKey() {
+    if (GROQ_KEY && GROQ_KEY.startsWith('gsk_')) {
+      hideModal();
+      updateKeyBadge(true);
+    } else {
+      showModal();
+      updateKeyBadge(false);
+    }
+  }
+
+  function showModal() {
+    document.getElementById('modal-overlay').style.display = 'flex';
+    setTimeout(() => document.getElementById('api-key-input').focus(), 100);
+  }
+
+  function hideModal() {
+    document.getElementById('modal-overlay').style.display = 'none';
+  }
+
+  function updateKeyBadge(active) {
+    document.getElementById('key-dot').style.background = active ? '#22c55e' : '#e05555';
+    document.getElementById('key-label').textContent = active ? 'Key Active ✓' : 'Add API Key';
+  }
+
+  function saveKey() {
+    const val = document.getElementById('api-key-input').value.trim();
+    const errEl = document.getElementById('modal-error');
+    if (!val.startsWith('gsk_')) {
+      errEl.style.display = 'block';
+      return;
+    }
+    errEl.style.display = 'none';
+    GROQ_KEY = val;
+    localStorage.setItem('maxxy_groq_key', GROQ_KEY);
+    hideModal();
+    updateKeyBadge(true);
+  }
 
   function autoResize(el) {
     el.style.height = 'auto';
@@ -527,10 +669,8 @@
 
   function appendMessage(role, text) {
     welcomeEl.style.display = 'none';
-
     const row = document.createElement('div');
     row.className = 'message-row';
-
     const isUser = role === 'user';
     row.innerHTML = `
       <div class="msg-avatar ${isUser ? 'user' : 'ai'}">${isUser ? 'Y' : '✦'}</div>
@@ -577,6 +717,10 @@
   }
 
   async function sendMessage() {
+    if (!GROQ_KEY || !GROQ_KEY.startsWith('gsk_')) {
+      showModal();
+      return;
+    }
     const text = inputEl.value.trim();
     if (!text || isTyping) return;
 
@@ -587,27 +731,38 @@
 
     appendMessage('user', text);
     chatHistory.push({ role: 'user', content: text });
-
     appendTyping();
 
     try {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + GROQ_KEY
+        },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
+          model: 'llama3-8b-8192',
           max_tokens: 1000,
-          system: SYSTEM,
-          messages: chatHistory
+          messages: [
+            { role: 'system', content: SYSTEM },
+            ...chatHistory
+          ]
         })
       });
 
       const data = await res.json();
-      const reply = data.content?.map(b => b.text || '').join('') || "Sorry, I couldn't respond right now.";
-
-      chatHistory.push({ role: 'assistant', content: reply });
-      removeTyping();
-      appendMessage('assistant', reply);
+      if (data.error) {
+        removeTyping();
+        appendMessage('assistant', '⚠️ Invalid API key. Please click "Key Active" above to update it.');
+        GROQ_KEY = '';
+        localStorage.removeItem('maxxy_groq_key');
+        updateKeyBadge(false);
+      } else {
+        const reply = data.choices?.[0]?.message?.content || "Sorry, I couldn't respond right now.";
+        chatHistory.push({ role: 'assistant', content: reply });
+        removeTyping();
+        appendMessage('assistant', reply);
+      }
     } catch (err) {
       removeTyping();
       appendMessage('assistant', '⚠️ Something went wrong. Please try again!');
@@ -617,6 +772,9 @@
     sendBtn.disabled = false;
     inputEl.focus();
   }
+
+  // Init on load
+  initKey();
 </script>
 </body>
 </html>
