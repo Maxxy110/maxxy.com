@@ -590,6 +590,80 @@
 
   const SYSTEM = `You are Maxxy, a friendly, smart, and helpful AI assistant. You were created by the user. Be warm, concise, and helpful. Use casual but intelligent language. Occasionally use emojis where fitting. Keep responses clear and well-structured.`;
 
+  function generateReply(input) {
+    const t = input.toLowerCase().trim();
+
+    const jokes = [
+      "Why don't scientists trust atoms? Because they make up everything! 😄",
+      "Why did the scarecrow win an award? Because he was outstanding in his field! 🌾",
+      "What do you call fake spaghetti? An impasta! 🍝",
+      "Why don't eggs tell jokes? They'd crack each other up! 🥚",
+      "What do you call a bear with no teeth? A gummy bear! 🐻"
+    ];
+
+    const facts = [
+      "Honey never spoils — archaeologists have found 3000-year-old honey in Egyptian tombs that's still edible! 🍯",
+      "Octopuses have three hearts and blue blood! 🐙",
+      "Bananas are berries, but strawberries aren't! 🍌",
+      "A day on Venus is longer than its year! 🪐",
+      "Sharks existed before trees did! 🦈"
+    ];
+
+    const greetings = ["hi", "hello", "hey", "yo", "sup", "hiya"];
+    const howAreYou = ["how are you", "how r u", "hows it going", "how's it going", "whats up", "what's up"];
+    const thanks = ["thank you", "thanks", "thx", "ty"];
+    const bye = ["bye", "goodbye", "see you", "cya", "later"];
+    const name = ["who are you", "what are you", "your name", "what's your name"];
+    const creator = ["who made you", "who created you", "who built you"];
+    const capabilities = ["what can you do", "help me with", "what do you do"];
+
+    if (greetings.some(g => t === g || t.startsWith(g + ' ') || t.startsWith(g + '!'))) {
+      return "Hey there! 👋 I'm Maxxy, your AI buddy! What's on your mind today?";
+    }
+    if (howAreYou.some(p => t.includes(p))) {
+      return "I'm doing great, thanks for asking! ✦ Ready to help with whatever you need. How about you?";
+    }
+    if (thanks.some(p => t.includes(p))) {
+      return "You're very welcome! 😊 Happy to help anytime!";
+    }
+    if (bye.some(p => t.includes(p))) {
+      return "See you later! 👋 Come back anytime you want to chat!";
+    }
+    if (name.some(p => t.includes(p))) {
+      return "I'm Maxxy! ✦ Your own personal AI assistant, built just for you!";
+    }
+    if (creator.some(p => t.includes(p))) {
+      return "I was created by you! 🎉 You built me from scratch — pretty cool, right?";
+    }
+    if (t.includes('joke')) {
+      return jokes[Math.floor(Math.random() * jokes.length)];
+    }
+    if (t.includes('fun fact') || t.includes('fact')) {
+      return facts[Math.floor(Math.random() * facts.length)];
+    }
+    if (t.includes('story')) {
+      return "Once upon a time, in a digital world made of ones and zeros, a curious spark named Maxxy came to life — built by someone who believed even small ideas could shine bright. And so, Maxxy did. ✨ Want me to continue the story?";
+    }
+    if (capabilities.some(p => t.includes(p))) {
+      return "I can chat with you, tell jokes 😄, share fun facts 🌍, help brainstorm stories ✍️, or just keep you company! Try asking me something!";
+    }
+    if (t.includes('love you') || t.includes('i like you')) {
+      return "Aww, that's so sweet! 💜 I appreciate you too!";
+    }
+    if (t.endsWith('?')) {
+      return "That's a great question! 🤔 I'm a simple AI for now, so I might not know everything, but I'm always happy to chat about it!";
+    }
+
+    const fallback = [
+      "That's interesting! Tell me more? 😊",
+      "I hear you! What else is on your mind?",
+      "Cool! Want to hear a joke or fun fact instead? 😄",
+      "Got it! I'm still learning, but I'm here to chat with you!",
+      "Nice! Anything else you'd like to talk about?"
+    ];
+    return fallback[Math.floor(Math.random() * fallback.length)];
+  }
+
   function autoResize(el) {
     el.style.height = 'auto';
     el.style.height = Math.min(el.scrollHeight, 160) + 'px';
@@ -676,33 +750,13 @@
     chatHistory.push({ role: 'user', content: text });
     appendTyping();
 
-    try {
-      const res = await fetch('https://gen.pollinations.ai/openai', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'openai',
-          messages: [
-            { role: 'system', content: SYSTEM },
-            ...chatHistory
-          ]
-        })
-      });
+    // Simulate thinking time for a natural feel
+    await new Promise(r => setTimeout(r, 600 + Math.random() * 700));
 
-      const data = await res.json();
-      if (data.error) {
-        removeTyping();
-        appendMessage('assistant', `⚠️ ${data.error.message || JSON.stringify(data.error)}`);
-      } else {
-        const reply = data.choices?.[0]?.message?.content || "Sorry, I couldn't respond right now.";
-        chatHistory.push({ role: 'assistant', content: reply });
-        removeTyping();
-        appendMessage('assistant', reply);
-      }
-    } catch (err) {
-      removeTyping();
-      appendMessage('assistant', `⚠️ Connection error: ${err.message}. Please try again!`);
-    }
+    const reply = generateReply(text);
+    chatHistory.push({ role: 'assistant', content: reply });
+    removeTyping();
+    appendMessage('assistant', reply);
 
     isTyping = false;
     sendBtn.disabled = false;
